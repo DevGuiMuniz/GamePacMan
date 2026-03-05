@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pac-Man Classic Web | Antigravity Edition</title>
+    <link rel="stylesheet" href="style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;700&family=Press+Start+2P&display=swap"
+        rel="stylesheet">
+    <meta name="description"
+        content="Uma versão moderna e clássica do lendário Pac-Man, construída com JavaScript puro e Canvas.">
+</head>
+
+<body>
+    <div id="game-container">
+        <header>
+            <div class="logo-container">
+                <h1 id="game-title">PAC-MAN</h1>
+                <p>Classic Web Edition</p>
+            </div>
+            <div class="stats">
+                <div class="stat-item">
+                    <span class="label">SCORE</span>
+                    <span id="score">0000</span>
+                </div>
+                <div class="stat-item">
+                    <span class="label">HIGH SCORE</span>
+                    <span id="high-score">0000</span>
+                </div>
+            </div>
+        </header>
+
+        <main id="game-canvas-wrapper">
+            <canvas id="gameCanvas"></canvas>
+
+            <!-- Screens -->
+            <div id="start-screen" class="overlay">
+                <div class="overlay-content">
+                    <h2> READY? </h2>
+                    <button id="start-button">PRESS TO START</button>
+                    <div class="controls-hint">
+                        <span>Arrows / WASD to Move</span>
+                    </div>
+                </div>
+            </div>
+
+            <div id="game-over-screen" class="overlay hidden">
+                <div class="overlay-content">
+                    <h2 class="game-over-text">GAME OVER</h2>
+                    <p>Total Score: <span id="final-score">0</span></p>
+                    <button id="restart-button">TRY AGAIN</button>
+                </div>
+            </div>
+
+            <div id="pause-screen" class="overlay hidden">
+                <div class="overlay-content">
+                    <h2>PAUSED</h2>
+                    <button id="resume-button">RESUME</button>
+                </div>
+            </div>
+        </main>
+
+        <footer>
+            <div class="lives-container" id="lives">
+                <!-- Life icons will be added here via JS -->
+            </div>
+            <div class="game-info">
+                <span>Avoid the ghosts, eat the pellets!</span>
+            </div>
+        </footer>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+
+</html>
