@@ -113,6 +113,48 @@ class Game {
                 case 'p': case 'escape': this.pauseGame(); break;
             }
         });
+
+        // Touch Controls (Swipe Detection)
+        let touchStartX = 0;
+        let touchStartY = 0;
+
+        this.canvas.addEventListener('touchstart', (e) => {
+            touchStartX = e.changedTouches[0].screenX;
+            touchStartY = e.changedTouches[0].screenY;
+        }, { passive: true });
+
+        this.canvas.addEventListener('touchend', (e) => {
+            if (this.gameState !== 'PLAYING') return;
+
+            const touchEndX = e.changedTouches[0].screenX;
+            const touchEndY = e.changedTouches[0].screenY;
+
+            this.handleSwipe(touchStartX, touchStartY, touchEndX, touchEndY);
+        }, { passive: true });
+    }
+
+    handleSwipe(startX, startY, endX, endY) {
+        const diffX = endX - startX;
+        const diffY = endY - startY;
+        const threshold = 30; // Min pixels to count as swipe
+
+        if (Math.abs(diffX) < threshold && Math.abs(diffY) < threshold) return;
+
+        if (Math.abs(diffX) > Math.abs(diffY)) {
+            // Horizontal swipe
+            if (diffX > 0) {
+                this.pacman.setNextDirection(DIRECTION.RIGHT);
+            } else {
+                this.pacman.setNextDirection(DIRECTION.LEFT);
+            }
+        } else {
+            // Vertical swipe
+            if (diffY > 0) {
+                this.pacman.setNextDirection(DIRECTION.DOWN);
+            } else {
+                this.pacman.setNextDirection(DIRECTION.UP);
+            }
+        }
     }
 
     startGame() {
