@@ -72,6 +72,7 @@ class Game {
         this.init();
         this.bindEvents();
         this.updateStats();
+        this.audio = new AudioManager();
 
         requestAnimationFrame(() => this.loop());
     }
@@ -98,6 +99,7 @@ class Game {
     bindEvents() {
         document.getElementById('start-button').addEventListener('click', () => this.startGame());
         document.getElementById('restart-button').addEventListener('click', () => this.restartGame());
+        document.getElementById('win-restart-button').addEventListener('click', () => this.restartGame());
         document.getElementById('resume-button').addEventListener('click', () => this.resumeGame());
 
         window.addEventListener('keydown', (e) => {
@@ -116,6 +118,7 @@ class Game {
     startGame() {
         document.getElementById('start-screen').classList.add('hidden');
         this.gameState = 'PLAYING';
+        this.audio.startBackgroundMusic();
     }
 
     pauseGame() {
@@ -135,12 +138,28 @@ class Game {
         this.updateStats();
         this.gameState = 'PLAYING';
         document.getElementById('game-over-screen').classList.add('hidden');
+        document.getElementById('winner-screen').classList.add('hidden');
+        this.audio.startBackgroundMusic();
     }
 
     gameOver() {
         this.gameState = 'GAMEOVER';
         document.getElementById('final-score').innerText = this.score;
         document.getElementById('game-over-screen').classList.remove('hidden');
+        this.audio.stopAll();
+
+        if (this.score > this.highScore) {
+            this.highScore = this.score;
+            localStorage.setItem('pacman-highscore', this.highScore);
+            this.updateStats();
+        }
+    }
+
+    winGame() {
+        this.gameState = 'WINNER';
+        document.getElementById('winner-score').innerText = this.score;
+        document.getElementById('winner-screen').classList.remove('hidden');
+        this.audio.stopAll();
 
         if (this.score > this.highScore) {
             this.highScore = this.score;
@@ -206,7 +225,7 @@ class Game {
             }
         }
         if (remainingPellets === 0) {
-            this.init(); // Reset level
+            this.winGame();
         }
     }
 
@@ -299,7 +318,20 @@ class Entity {
 
         if (r < 0 || r >= this.game.rows || c < 0 || c >= this.game.cols) return false;
         const tile = this.game.maze[r][c];
-        return tile !== 1 && tile !== 7; // Walls and Door
+
+        // Walls are always impassable
+        if (tile === 1) return false;
+
+        // Ghost Door (7)
+        if (tile === 7) {
+            // Only ghosts can cross doors, and only if they are eaten or going out
+            if (this instanceof Ghost) {
+                return true;
+            }
+            return false;
+        }
+
+        return true;
     }
 
     isAtCenter() {
@@ -355,11 +387,13 @@ class Pacman extends Entity {
             this.game.maze[pos.r][pos.c] = 5;
             this.game.score += 10;
             this.game.updateStats();
+            this.game.audio.playPellet();
         } else if (tile === 3) { // Power Pellet
             this.game.maze[pos.r][pos.c] = 5;
             this.game.score += 50;
             this.game.handlePowerPellet();
             this.game.updateStats();
+            this.game.audio.playPowerPellet();
         }
     }
 
@@ -470,6 +504,13 @@ class Ghost extends Entity {
 
     updateTarget() {
         const pPos = this.game.pacman.getTilePos();
+        const curr = this.getTilePos();
+
+        // If in ghost house, target is the door
+        if (this.game.maze[curr.r][curr.c] === 4) {
+            this.target = { r: 8, c: 9 };
+            return;
+        }
 
         if (this.state === 'EATEN') {
             this.target = { r: 9, c: 9 };
@@ -525,6 +566,73 @@ class Ghost extends Entity {
         ctx.arc(this.x - 4 + this.dir.x * 2, this.y - 4 + this.dir.y * 2, 1.5, 0, Math.PI * 2);
         ctx.arc(this.x + 4 + this.dir.x * 2, this.y - 4 + this.dir.y * 2, 1.5, 0, Math.PI * 2);
         ctx.fill();
+    }
+}
+
+class AudioManager {
+    constructor() {
+        this.ctx = new (window.AudioContext || window.webkitAudioContext)();
+        this.bgOsc = null;
+    }
+
+    playPellet() {
+        this.beep(800, 0.05, 'sine');
+    }
+
+    playPowerPellet() {
+        this.beep(400, 0.2, 'square');
+    }
+
+    startBackgroundMusic() {
+        if (this.bgOsc) return;
+        this.bgOsc = this.ctx.createOscillator();
+        const gain = this.ctx.createGain();
+
+        this.bgOsc.type = 'triangle';
+        this.bgOsc.frequency.setValueAtTime(110, this.ctx.currentTime);
+
+        gain.gain.setValueAtTime(0.05, this.ctx.currentTime);
+
+        this.bgOsc.connect(gain);
+        gain.connect(this.ctx.destination);
+
+        this.bgOsc.start();
+
+        let noteIdx = 0;
+        const melody = [
+            110, 220, 165, 110, 220, 165, // Simple rhythmic pattern
+            123, 246, 185, 123, 246, 185
+        ];
+
+        this.melodyInterval = setInterval(() => {
+            if (this.bgOsc) {
+                const freq = melody[noteIdx % melody.length];
+                this.bgOsc.frequency.setTargetAtTime(freq, this.ctx.currentTime, 0.05);
+                noteIdx++;
+            }
+        }, 200);
+    }
+
+    stopAll() {
+        if (this.bgOsc) {
+            this.bgOsc.stop();
+            this.bgOsc = null;
+            if (this.melodyInterval) clearInterval(this.melodyInterval);
+        }
+    }
+
+    beep(freq, duration, type) {
+        if (this.ctx.state === 'suspended') this.ctx.resume();
+        const osc = this.ctx.createOscillator();
+        const gain = this.ctx.createGain();
+        osc.type = type;
+        osc.frequency.setValueAtTime(freq, this.ctx.currentTime);
+        gain.gain.setValueAtTime(0.1, this.ctx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.01, this.ctx.currentTime + duration);
+        osc.connect(gain);
+        gain.connect(this.ctx.destination);
+        osc.start();
+        osc.stop(this.ctx.currentTime + duration);
     }
 }
 

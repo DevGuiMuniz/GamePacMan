@@ -142,6 +142,10 @@ canvas {
     color: var(--ghost-red) !important;
 }
 
+.winner-text {
+    color: var(--ghost-cyan) !important;
+}
+
 button {
     background: transparent;
     border: 3px solid var(--pacman-yellow);
